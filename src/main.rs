@@ -159,6 +159,7 @@ impl Parse for Dice {
             if next_ch == 'd' {
                 let (modifier_cursor, modifier) = next_cursor.next()?;
                 let (next_cursor, value) = u32::parse(modifier_cursor)?;
+                cursor = next_cursor;
                 Some(match modifier {
                     '+' => Drop::Highest(value as usize),
                     '-' => Drop::Lowest(value as usize),
