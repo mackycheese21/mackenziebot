@@ -4,20 +4,23 @@ use std::fmt::Display;
 use serenity::static_assertions::_core::fmt::Formatter;
 
 #[derive(Debug)]
-enum Drop {
-    Highest(usize),
-    Lowest(usize),
+enum DropDirection {
+    Highest,
+    Lowest,
+}
+
+#[derive(Debug)]
+struct Drop {
+    direction: DropDirection,
+    value: u32,
 }
 
 impl Display for Drop {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", match self {
-            Drop::Highest(_) => '+',
-            Drop::Lowest(_) => '-'
-        }, match self {
-            Drop::Highest(x) => x,
-            Drop::Lowest(x) => x
-        })
+        write!(f, "{}{}", match &self.direction {
+            DropDirection::Highest => '+',
+            DropDirection::Lowest => '-'
+        }, self.value)
     }
 }
 
@@ -49,26 +52,36 @@ impl Dice {
         }
         v.sort();
         if let Some(drop) = &self.drop {
-            match drop {
-                Drop::Highest(value) => v.drain(v.len() - value..),
-                Drop::Lowest(value) => v.drain(0..*value)
+            match drop.direction {
+                DropDirection::Highest => v.drain(v.len() - drop.value as usize..),
+                DropDirection::Lowest => v.drain(0..drop.value as usize)
             };
         }
         v
     }
 }
 
-enum Bonus {
-    Positive(u32),
-    Negative(u32),
-}
+type Bonus = u32;
 
+#[derive(Debug)]
 enum Component {
     Dice(Dice),
     Bonus(Bonus),
 }
 
-type Args = Vec<Component>;
+#[derive(Debug)]
+enum Sign {
+    Positive,
+    Negative,
+}
+
+#[derive(Debug)]
+struct Term {
+    component: Component,
+    sign: Sign,
+}
+
+type Args = Vec<Term>;
 
 #[derive(Clone, Copy, Debug)]
 struct Cursor<'a> {
@@ -108,6 +121,7 @@ trait Parse: Sized {
     fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize>;
 }
 
+// Also for bonus since bonus = u32
 impl Parse for u32 {
     fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize> {
         fn parse_digit(value: char) -> Option<u32> {
@@ -126,7 +140,7 @@ impl Parse for u32 {
             }
         }
         let (mut cursor, ch) = cursor.next()?;
-        let mut value = parse_digit(ch).filter(|c| *c > 0).ok_or(cursor.index)?; // TODO: should this return err if the first character is zero?
+        let mut value = parse_digit(ch).filter(|c| *c > 0).ok_or(cursor.index)?;
         loop {
             let next = cursor.next();
             if let Ok((next_cursor, ch)) = next {
@@ -160,10 +174,13 @@ impl Parse for Dice {
                 let (modifier_cursor, modifier) = next_cursor.next()?;
                 let (next_cursor, value) = u32::parse(modifier_cursor)?;
                 cursor = next_cursor;
-                Some(match modifier {
-                    '+' => Drop::Highest(value as usize),
-                    '-' => Drop::Lowest(value as usize),
-                    _ => return Err(modifier_cursor.index)
+                Some(Drop {
+                    direction: match modifier {
+                        '+' => DropDirection::Highest,
+                        '-' => DropDirection::Lowest,
+                        _ => return Err(modifier_cursor.index)
+                    },
+                    value,
                 })
             } else {
                 None
@@ -175,21 +192,50 @@ impl Parse for Dice {
     }
 }
 
-impl Parse for Bonus {
-    fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize> {
-        unimplemented!()
-    }
-}
-
 impl Parse for Component {
     fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize> {
-        unimplemented!()
+        let dice = Dice::parse(cursor);
+        if dice.is_ok() {
+            dice.map(|(cursor, dice)| (cursor, Component::Dice(dice)))
+        } else {
+            let bonus = Bonus::parse(cursor);
+            if bonus.is_ok() {
+                bonus.map(|(cursor, bonus)| (cursor, Component::Bonus(bonus)))
+            } else {
+                Err(cursor.index)
+            }
+        }
     }
 }
 
 impl Parse for Args {
     fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize> {
-        unimplemented!()
+        let (mut cursor, first_component) = Component::parse(cursor)?;
+        let mut vec = vec![Term {
+            sign: Sign::Positive,
+            component: first_component,
+        }];
+        loop {
+            cursor.flush_whitespace();
+            if let Ok((next_cursor, ch)) = cursor.next() {
+                cursor = next_cursor;
+                let sign = match ch {
+                    '+' => Sign::Positive,
+                    '-' => Sign::Negative,
+                    _ => return Err(cursor.index)
+                };
+                cursor.flush_whitespace();
+                let (next_cursor, next_component) = Component::parse(cursor)?;
+                cursor = next_cursor;
+                vec.push(Term {
+                    sign,
+                    component: next_component,
+                })
+            } else {
+                return Ok((cursor, vec))
+            }
+        }
+        Ok((cursor, vec))
     }
 }
 
@@ -197,8 +243,8 @@ macro_rules! test_dice {
     ($str: literal) => {
         let str = $str;
         let cursor = Cursor { value: str, index: 0 };
-        let dice = Dice::parse(cursor).unwrap().1;
-        println!("{:?}", dice)
+        let args = Args::parse(cursor).unwrap().1;
+        println!("{:?}", args)
     };
 }
 
@@ -206,19 +252,5 @@ fn main() {
     test_dice!("d2");
     test_dice!("320d324");
     test_dice!("1d3d+4");
-    test_dice!("4d8d+3");
-    // let value = "1234 5432";
-    // let cursor = Cursor { value, index: 0 };
-    // let (mut cursor, uint) = cursor.parse_uint().unwrap();
-    // assert_eq!(uint, 1234);
-    // cursor.flush_whitespace();
-    // let (cursor, uint) = cursor.parse_uint().unwrap();
-    // assert_eq!(uint, 5432);
-    // assert_eq!(cursor.next().err().unwrap(), 9);
-    // let d = Dice {
-    //     count: 10,
-    //     max: 10,
-    //     drop: 2,
-    // };
-    // println!("{:?}", d.generate())
+    test_dice!("3 - 4d8d+3");
 }
