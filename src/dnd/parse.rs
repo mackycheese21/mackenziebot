@@ -1,4 +1,4 @@
-use crate::dnd::{Drop, DropDirection, Dice, Component, Cursor, Sign, Term, Args, Bonus};
+use crate::dnd::{Args, Bonus, Component, Cursor, Dice, Drop, DropDirection, Sign, Term};
 
 pub trait Parse: Sized {
     fn parse(cursor: Cursor) -> Result<(Cursor, Self), usize>;

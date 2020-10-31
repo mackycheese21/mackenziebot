@@ -1,5 +1,6 @@
-use crate::dnd::{DropDirection, Drop, Dice, Component, Sign, Term};
 use std::fmt::{Display, Formatter, Result};
+
+use crate::dnd::{Component, Dice, Drop, DropDirection, Sign, Term};
 
 impl Display for DropDirection {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

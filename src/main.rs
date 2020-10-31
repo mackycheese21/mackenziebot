@@ -1,6 +1,8 @@
-mod dnd;
-use dnd::{Args, Cursor, Parse, Component};
+use dnd::{Args, Component, Cursor, Parse};
+
 use crate::dnd::Sign;
+
+mod dnd;
 
 fn evaluate(args: Args) -> String {
     let mut result = "".to_string();
@@ -17,12 +19,12 @@ fn evaluate(args: Args) -> String {
                     return format!("Error validating dice {}{}: {}", match arg.sign {
                         Sign::Positive => "",
                         Sign::Negative => "-"
-                    }, dice, err)
+                    }, dice, err);
                 }
                 let values = dice.generate(&mut rand::thread_rng());
                 result = format!("{}\n{}: {:?}", result, dice, values);
                 (values.iter().sum::<u32>(), 0)
-            },
+            }
             Component::Bonus(bonus) => {
                 (bonus, bonus)
             }

@@ -1,5 +1,6 @@
 use rand::Rng;
-use crate::dnd::{DropDirection, Dice};
+
+use crate::dnd::{Dice, DropDirection};
 
 impl Dice {
     pub fn validate(&self) -> Option<String> {
