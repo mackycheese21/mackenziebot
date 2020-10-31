@@ -5,17 +5,8 @@ pub struct Cursor<'a> {
 }
 
 impl Cursor<'_> {
-    pub fn current(&self) -> char {
-        self.value.bytes().nth(self.index).unwrap() as char;
-        self.value.as_bytes()[self.index] as char;
-        self.value.chars().nth(self.index).unwrap()
-    }
     pub fn next(&self) -> Result<(Self, char), usize> {
-        if self.index < self.value.len() {
-            Ok((Cursor { value: self.value, index: self.index + 1 }, self.current()))
-        } else {
-            Err(self.index)
-        }
+        self.value.chars().nth(self.index).map(|ch| (Cursor { value: self.value, index: self.index + 1 }, ch)).ok_or(self.index)
     }
     pub fn expect(&self, ch: char) -> Result<Self, usize> {
         let (next, nch) = self.next()?;
@@ -26,8 +17,12 @@ impl Cursor<'_> {
         }
     }
     pub fn flush_whitespace(&mut self) {
-        while self.index < self.value.len() && self.current().is_whitespace() {
-            self.index += 1
+        while let Some(ch) = self.value.chars().nth(self.index) {
+            if ch.is_whitespace() {
+                self.index += 1
+            } else {
+                break;
+            }
         }
     }
     pub fn new(value: &str) -> Cursor {

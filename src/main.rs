@@ -1,50 +1,33 @@
-use dnd::{Args, Component, Cursor, Parse};
-
-use crate::dnd::Sign;
+use serenity::async_trait;
+use serenity::Client;
+use serenity::model::gateway::Activity;
+use serenity::model::prelude::{Message, Ready};
+use serenity::prelude::{Context, EventHandler};
 
 mod dnd;
+mod commands;
 
-fn evaluate(args: Args) -> String {
-    let mut result = "".to_string();
-    let mut sum = 0;
-    let mut total_bonus = 0;
-    for arg in args.terms {
-        let mul = match arg.sign {
-            Sign::Positive => 1,
-            Sign::Negative => -1
-        };
-        let (sum_change, bonus_change) = match arg.component {
-            Component::Dice(dice) => {
-                if let Some(err) = dice.validate() {
-                    return format!("Error validating dice {}{}: {}", match arg.sign {
-                        Sign::Positive => "",
-                        Sign::Negative => "-"
-                    }, dice, err);
-                }
-                let values = dice.generate(&mut rand::thread_rng());
-                result = format!("{}\n{}: {:?}", result, dice, values);
-                (values.iter().sum::<u32>(), 0)
-            }
-            Component::Bonus(bonus) => {
-                (bonus, bonus)
-            }
-        };
-        sum += mul * sum_change as i32;
-        total_bonus += mul * bonus_change as i32;
+struct Handler;
+
+#[async_trait]
+impl EventHandler for Handler {
+    async fn message(&self, ctx: Context, msg: Message) {
+        if msg.content.starts_with("!roll") {
+            commands::dnd(&ctx, &msg, msg.content[5..].trim()).await.expect("Error while running the roll command");
+        }
     }
-    format!("{}\nTotal bonus: {}\nSum: {}", &result[1..], total_bonus, sum)
+    async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
+        println!("{:#?}", ctx.http.get_current_application_info().await.expect("Error while getting current application info"));
+        ctx.set_activity(Activity::playing("with joe 🤣 😂 😂 😂 🤣 🤣 😂 🤣 🤣 🤣")).await;
+    }
 }
 
-macro_rules! t {
-    ($str: literal) => {
-        let cursor = Cursor::new($str);
-        let args = Args::parse(cursor).unwrap().1;
-        println!("{}:\n{}\n", $str, evaluate(args))
-    };
-}
-
-fn main() {
-    t!("5d10d+2 + 2d5 - 2");
-    t!("5d15d+20");
-    t!("69d420 - 666");
+#[tokio::main]
+async fn main() {
+    dotenv::dotenv().expect("Unable to read .env file");
+    let token = std::env::var("TOKEN").expect(".env file had no TOKEN key");
+    let mut client = Client::builder(token)
+        .event_handler(Handler)
+        .await.expect("Failed to create client");
+    client.start().await.expect("Client error")
 }

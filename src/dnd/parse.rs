@@ -25,6 +25,9 @@ impl Parse for u32 {
         let (mut cursor, ch) = cursor.next()?;
         let mut value = parse_digit(ch).filter(|c| *c > 0).ok_or(cursor.index)?;
         loop {
+            if value > 1000 {
+                return Err(cursor.index);
+            }
             let next = cursor.next();
             if let Ok((next_cursor, ch)) = next {
                 if let Some(digit) = parse_digit(ch) {
@@ -61,7 +64,7 @@ impl Parse for Dice {
                     direction: match modifier {
                         '+' => DropDirection::Highest,
                         '-' => DropDirection::Lowest,
-                        _ => return Err(modifier_cursor.index)
+                        _ => return Err(next_cursor.index)
                     },
                     value,
                 })
@@ -105,7 +108,7 @@ impl Parse for Args {
                 let sign = match ch {
                     '+' => Sign::Positive,
                     '-' => Sign::Negative,
-                    _ => return Err(cursor.index)
+                    _ => return Err(cursor.index - 1)
                 };
                 cursor.flush_whitespace();
                 let (next_cursor, next_component) = Component::parse(cursor)?;

@@ -7,4 +7,5 @@ mod display;
 mod cursor;
 mod parse;
 mod dice;
+mod args;
 
