@@ -1,4 +1,4 @@
-use crate::dnd::{Args, Component, Sign};
+use crate::dnd::{Args, Component, Sign, DropDirection};
 
 impl Args {
     pub fn evaluate(&self) -> String {
@@ -18,8 +18,18 @@ impl Args {
                             Sign::Negative => "-"
                         }, dice, err);
                     }
-                    let values = dice.generate(&mut rand::thread_rng());
-                    result = format!("{}\n{}: {:?}", result, dice, values);
+                    let mut values = dice.generate(&mut rand::thread_rng());
+                    let dropped;
+                    if let Some(drop) = &dice.drop {
+                        dropped =
+                            match drop.direction {
+                                DropDirection::Highest => values.drain(values.len() - drop.value as usize..),
+                                DropDirection::Lowest => values.drain(0..drop.value as usize)
+                            }.as_slice().iter().map(|x| format!("{}", x.to_string())).collect::<Vec<String>>();
+                    } else {
+                        dropped = [].to_vec();
+                    }
+                    result = format!("{}\n{}: [~~{}~~, {}]", result, dice, dropped.join(", "), values.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", "));
                     (values.iter().sum::<u32>(), 0)
                 }
                 Component::Bonus(bonus) => {

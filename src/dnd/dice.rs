@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::dnd::{Dice, DropDirection};
+use crate::dnd::Dice;
 
 impl Dice {
     pub fn validate(&self) -> Option<String> {
@@ -20,12 +20,12 @@ impl Dice {
             v.push(rng.gen_range(1, self.max + 1))
         }
         v.sort();
-        if let Some(drop) = &self.drop {
-            match drop.direction {
-                DropDirection::Highest => v.drain(v.len() - drop.value as usize..),
-                DropDirection::Lowest => v.drain(0..drop.value as usize)
-            };
-        }
+//        if let Some(drop) = &self.drop {
+//            match drop.direction {
+//                DropDirection::Highest => v.drain(v.len() - drop.value as usize..),
+//                DropDirection::Lowest => v.drain(0..drop.value as usize)
+//            };
+//        }
         v
     }
 }
