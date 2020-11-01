@@ -1,4 +1,4 @@
-use crate::dnd::{Args, Component, Sign, DropDirection};
+use crate::dnd::{Args, Component, DropDirection, Sign};
 
 impl Args {
     pub fn evaluate(&self) -> String {
@@ -19,17 +19,18 @@ impl Args {
                         }, dice, err);
                     }
                     let mut values = dice.generate(&mut rand::thread_rng());
-                    let dropped;
-                    if let Some(drop) = &dice.drop {
-                        dropped =
+                    let dropped = match &dice.drop {
+                        Some(drop) => {
                             match drop.direction {
                                 DropDirection::Highest => values.drain(values.len() - drop.value as usize..),
                                 DropDirection::Lowest => values.drain(0..drop.value as usize)
-                            }.as_slice().iter().map(|x| format!("{}", x.to_string())).collect::<Vec<String>>();
-                    } else {
-                        dropped = [].to_vec();
-                    }
-                    result = format!("{}\n{}: [~~{}~~, {}]", result, dice, dropped.join(", "), values.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", "));
+                            }.collect()
+                        }
+                        None => vec![]
+                    };
+                    result = format!("{}\n{}: [~~{}~~, **{}**]", result, dice,
+                                     dropped.iter().map(u32::to_string).collect::<Vec<String>>().join(", "),
+                                     values.iter().map(u32::to_string).collect::<Vec<String>>().join(", "));
                     (values.iter().sum::<u32>(), 0)
                 }
                 Component::Bonus(bonus) => {

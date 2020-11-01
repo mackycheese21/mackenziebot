@@ -18,7 +18,7 @@ impl EventHandler for Handler {
     }
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
         println!("{:#?}", ctx.http.get_current_application_info().await.expect("Error while getting current application info"));
-        ctx.set_activity(Activity::playing("with joe 🤣 😂 😂 😂 🤣 🤣 😂 🤣 🤣 🤣")).await;
+        ctx.set_activity(Activity::playing(&format!("the ready event fired at {}", chrono::Utc::now().date()))).await;
     }
 }
 
