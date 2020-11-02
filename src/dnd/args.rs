@@ -33,9 +33,7 @@ impl Args {
                                      values.iter().map(u32::to_string).collect::<Vec<String>>().join(", "));
                     (values.iter().sum::<u32>(), 0)
                 }
-                Component::Bonus(bonus) => {
-                    (*bonus, *bonus)
-                }
+                Component::Bonus(bonus) => (*bonus, *bonus)
             };
             sum += mul * sum_change as i32;
             total_bonus += mul * bonus_change as i32;
